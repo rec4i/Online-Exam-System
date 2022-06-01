@@ -1,0 +1,947 @@
+@{
+    Layout = "~/Views/Shared/Anasayfa_Layout.cshtml";
+}
+<link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.19.1/dist/bootstrap-table.min.css">
+<script src="https://unpkg.com/bootstrap-table@1.19.1/dist/bootstrap-table.min.js"></script>
+<script>
+    function ajaxRequest(params) {
+        $.ajax({
+            url: "/api/Questions/Question_Get_With_Pagenation",
+            type: 'POST',
+            async: false,
+            dataType: "json",
+            data: '{' +
+                '"offset":"' + params.data.offset + '",' +
+                '"limit":"' + params.data.limit + '",' +
+                '"search":"' + params.data.search + '"' +
+                '}',
+            contentType: "application/json; charset=utf-8",
+            success: function (data) {
+                var temp = data
+                var rows = []
+                console.log(data)
+                for (i = 0; i < temp.rows.length; i++) {
+                    var x = {
+                        'Question': temp.rows[i].question_Text,
+                        'Delete': '<button class="btn btn-danger btn-sm" value="' + temp.rows[i].id + '" id="Delete" style="word-break: keep-all;"><i class="fa fa-trash "></i> Delete</button>',
+                        'Edit': '<button class="btn btn-warning btn-sm" value="' + temp.rows[i].id + '" id="Edit" style="word-break: keep-all;"><i class="fa fa-file-text "></i> Edit</button>'
+                    }
+                    rows.push(x)
+
+                }
+                temp.rows = rows
+                params.success(temp)
+
+
+            },
+            error: function () {
+                alert('Talep esnasında sorun oluştu.Yeniden deneyin');
+            }
+        });
+
+    }
+</script>
+<script>
+    $.fn.once = function (a, b) {
+        return this.each(function () {
+            $(this).off(a).on(a, b);
+        });
+    };
+    $(document).ready(function () {
+        $('#Create_Question_Btn').click(function () {
+
+            $('#Questions_Modal').modal('show')
+        })
+
+        $('#Add_Answer_Btn').click(function () {
+
+            if ($('input[name=Answers]').each(function () { }).length < 1) {
+                var variable = '' +
+                    ' <div class="row" style="padding-top: 25px;">' +
+                    '                        <div class="col-md-10">' +
+                    '                            <input type="text" name="Answers" True_Answer="True" placeholder="True Answer!" class="form-control">' +
+                    '                        </div>' +
+                    '                        <div class="col-md-2">' +
+                    '                            <button type="button"  id="Delete_Answer" class="btn btn-block btn-danger"><i' +
+                    '                                    class="fa fa-fw fa-trash"></i>Delete</button>' +
+                    '                        </div>' +
+                    '                    </div>' +
+                    '';
+                $('#Answers').append(variable);
+            }
+            else {
+                var variable = '' +
+                    ' <div class="row" style="padding-top: 25px;">' +
+                    '                        <div class="col-md-10">' +
+                    '                            <input type="text" name="Answers" True_Answer="False" placeholder="Answer" class="form-control">' +
+                    '                        </div>' +
+                    '                        <div class="col-md-2">' +
+                    '                            <button type="button"  id="Delete_Answer" class="btn btn-block btn-danger"><i' +
+                    '                                    class="fa fa-fw fa-trash"></i>Delete</button>' +
+                    '                        </div>' +
+                    '                    </div>' +
+                    '';
+                $('#Answers').append(variable);
+
+
+
+            }
+            $('button[id=Delete_Answer]').once('click', function () {
+
+                if ($(this).parent().parent().find('input').attr('True_Answer') == "True") {
+                    $(this).parent().parent().remove()
+                    $('input[name=Answers][True_Answer=False]').first().attr('True_Answer', 'True').attr('placeholder', 'True Answer!')
+                }
+                else {
+                    $(this).parent().parent().remove()
+                }
+
+            })
+
+
+
+        })
+
+        $('#Save_Question').click(function () {
+
+
+
+            if ($('input[name=Answers]').each(function () { }).length < 1) {
+                Swal.fire(
+                    'Please Add Answers',
+                )
+            }
+            else {
+                var is_Sendeable = 1;
+                var Question_Id = 0;
+
+                if ($('#Question_Text').val() == "") {
+                    $('#Question_Text').attr('class', 'form-control is-invaild')
+                    is_Sendeable = 0
+                }
+                else {
+                    $('#Question_Text').attr('class', 'form-control')
+                    is_Sendeable = 1
+                }
+                var x = {
+                    Question_Text: $('#Question_Text').val(),
+                    Question_Pool_Id: $('#Question_Pool_Select').find('option:selected').attr('value')
+                }
+                if (x == "") {
+                    $('#Question_Pool_Select').attr('class', 'form-control is-invaild')
+                    is_Sendeable = 0
+                }
+                else {
+                    $('#Question_Pool_Select').attr('class', 'form-control')
+                    is_Sendeable = 1
+                }
+
+                if (is_Sendeable == 1) {
+                    $.ajax({
+                        url: 'api/Questions/Question_Add',
+                        type: 'POST',
+                        async: false,
+                        dataType: "json",
+                        data: JSON.stringify(x),
+                        contentType: "application/json; charset=utf-8",
+                        success: function (data) {
+
+                            Question_Id = data.id
+                            Create_Question_Table($('#Questions_Table'), 0, 0)
+
+                        },
+                        error: function (xhr, status, error) {
+                            if (xhr.status == 200) {
+
+                            }
+                            else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Talep Esnasında Bir Hata Oluştur',
+                                    text: '' + xhr.status + '   ' + error.Message,
+                                })
+                            }
+
+                        }
+                    })
+
+                }
+
+
+
+
+
+
+
+                $('input[name=Answers]').each(function () {
+                    if ($(this).val() == "") {
+                        $(this).attr('class', 'form-control is-invaild')
+                        is_Sendeable = 0
+                    }
+                    else {
+                        $(this).attr('class', 'form-control')
+                        is_Sendeable = 1
+
+                    }
+                })
+
+                if (is_Sendeable == 1) {
+                    $('input[name=Answers]').each(function () {
+                        var Answers = {
+                            Answer_Text: $(this).val(),
+                            Question_Id: Question_Id,
+                            Is_True: $(this).attr('True_Answer') == "True" ? 1 : 0
+                        }
+                        console.log(Answers)
+                        Push_Answer(Answers)
+                    })
+
+                }
+                $('input[name=Answers]').each(function () {
+                    $(this).val("")
+                })
+                $('#Question_Text').val("")
+
+            }
+
+
+
+        })
+
+        function Push_Answer(Answers) {
+
+
+            $.ajax({
+                url: 'api/Answer/Answer_Add',
+                type: 'POST',
+                async: false,
+                dataType: "json",
+                data: JSON.stringify(Answers),
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+
+                },
+                error: function (xhr, status, error) {
+                    if (xhr.status == 200) {
+
+                    }
+                    else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Talep Esnasında Bir Hata Oluştur',
+                            text: '' + xhr.status + '   ' + error.Message,
+                        })
+                    }
+
+                }
+            })
+
+
+        }
+
+
+
+        Create_Question_Table($('#Questions_Table'), 0, 0)
+        function Create_Question_Table($el, cells, rows) {
+
+            $el.bootstrapTable('destroy');
+
+            var i; var j; var row
+            var columns = [];
+            var data__ = [];
+
+            columns.push({
+                field: 'Question',
+                title: 'Question',
+                sortable: true
+            })
+            columns.push({
+                field: 'Delete',
+                title: 'Delete',
+                sortable: true
+            })
+            columns.push({
+                field: 'Edit',
+                title: 'Edit',
+                sortable: true
+            })
+
+
+
+            $el.bootstrapTable({
+                sidePagination: "server",
+                pagination: true,
+                ajax: "ajaxRequest",
+                clickToSelect: true,
+                columns: columns,
+                data: data__,
+                onPostBody: function () {
+                    $('button[id=Delete]').click(function () {
+                        console.log($(this).attr('value'))
+                        Swal.fire({
+                            title: 'Are you sure?',
+                            text: "You won't be able to revert this!",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Yes, delete it!'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+
+                                var x = {
+                                    id: $(this).attr('value')
+                                }
+                                $.ajax({
+                                    url: 'api/Questions/Question_Delete',
+                                    type: 'POST',
+                                    async: false,
+                                    dataType: "json",
+                                    data: JSON.stringify(x),
+                                    contentType: "application/json; charset=utf-8",
+                                    success: function (data) {
+                                        Swal.fire(
+                                            'Deleted!',
+                                            'success'
+                                        )
+                                        Create_Question_Table($('#Questions_Table'), 0, 0)
+
+                                    },
+                                    error: function (xhr, status, error) {
+                                        if (xhr.status == 200) {
+
+                                        }
+                                        else {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Talep Esnasında Bir Hata Oluştur',
+                                                text: '' + xhr.status + '   ' + error.Message,
+                                            })
+                                        }
+
+                                    }
+                                })
+                            }
+                        })
+
+                    })
+                    $('button[id=Edit]').click(function () {
+                        console.log($(this).attr('value'))
+
+                        $('#Questions_Modal_Edit').modal('show')
+                        $('#Edit_Question').attr('Question_Id', $(this).attr('value'))
+
+                        Load_Answers($(this).attr('value'))
+
+
+
+                    })
+                }
+
+            })
+
+        }
+
+        function Load_Answers(Question_Id) {
+            var x = {
+                id: Question_Id
+            }
+
+            var Answers = [];
+
+            $.ajax({
+                url: 'api/Answer/Answer_Get_By_Question_Id',
+                type: 'POST',
+                async: false,
+                dataType: "json",
+                data: JSON.stringify(x),
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    console.log(data)
+                    Answers = data
+
+                },
+                error: function (xhr, status, error) {
+                    if (xhr.status == 200) {
+
+                    }
+                    else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Talep Esnasında Bir Hata Oluştur',
+                            text: '' + xhr.status + '   ' + error.Message,
+                        })
+                    }
+
+                }
+            })
+            $('#Answers_Edit').empty()
+            $('#Question_Text_Edit').empty()
+            for (var i = 0; i < Answers.length; i++) {
+                $('#Question_Text_Edit').val(Answers[i].question.question_Text)
+                if (Answers[i].is_True == 1) {
+                    var variable = '' +
+                        ' <div class="row" style="padding-top: 25px;">' +
+                        '                        <div class="col-md-10">' +
+                        '                            <input type="text" Answer_Id="' + Answers[i].id + '" value="' + Answers[i].answer_Text + '" name="Answers_Edit" True_Answer="True" placeholder="True Answer!" class="form-control">' +
+                        '                        </div>' +
+                        '                        <div class="col-md-2">' +
+                        '                            <button type="button"  id="Delete_Answer_Edit" class="btn btn-block btn-danger"><i' +
+                        '                                    class="fa fa-fw fa-trash"></i>Delete</button>' +
+                        '                        </div>' +
+                        '                    </div>' +
+                        '';
+                    $('#Answers_Edit').append(variable);
+
+                }
+                else {
+                    var variable = '' +
+                        ' <div class="row" style="padding-top: 25px;">' +
+                        '                        <div class="col-md-10">' +
+                        '                            <input type="text"  Answer_Id="' + Answers[i].id + '" value="' + Answers[i].answer_Text + '" name="Answers_Edit" True_Answer="False" placeholder="Answer" class="form-control">' +
+                        '                        </div>' +
+                        '                        <div class="col-md-2">' +
+                        '                            <button type="button"  id="Delete_Answer_Edit" class="btn btn-block btn-danger"><i' +
+                        '                                    class="fa fa-fw fa-trash"></i>Delete</button>' +
+                        '                        </div>' +
+                        '                    </div>' +
+                        '';
+                    $('#Answers_Edit').append(variable);
+
+
+                }
+
+
+
+
+            }
+            $('button[id=Delete_Answer_Edit]').once('click', function () {
+
+                if ($(this).parent().parent().find('input').attr('True_Answer') == "True") {
+                    $(this).parent().parent().remove()
+                    $('input[name=Answers_Edit][True_Answer=False]').first().attr('True_Answer', 'True').attr('placeholder', 'True Answer!')
+                }
+                else {
+                    $(this).parent().parent().remove()
+                }
+
+            })
+
+
+
+
+
+
+        }
+
+        $('#Edit_Answer_Btn').click(function () {
+
+            if ($('input[name=Answers_Edit]').each(function () { }).length < 1) {
+                var variable = '' +
+                    ' <div class="row" style="padding-top: 25px;">' +
+                    '                        <div class="col-md-10">' +
+                    '                            <input type="text" name="Answers_Edit" True_Answer="True" placeholder="True Answer!" class="form-control">' +
+                    '                        </div>' +
+                    '                        <div class="col-md-2">' +
+                    '                            <button type="button"  id="Delete_Answer_Edit" class="btn btn-block btn-danger"><i' +
+                    '                                    class="fa fa-fw fa-trash"></i>Delete</button>' +
+                    '                        </div>' +
+                    '                    </div>' +
+                    '';
+                $('#Answers_Edit').append(variable);
+            }
+            else {
+                var variable = '' +
+                    ' <div class="row" style="padding-top: 25px;">' +
+                    '                        <div class="col-md-10">' +
+                    '                            <input type="text" name="Answers_Edit" True_Answer="False" placeholder="Answer" class="form-control">' +
+                    '                        </div>' +
+                    '                        <div class="col-md-2">' +
+                    '                            <button type="button"  id="Delete_Answer_Edit" class="btn btn-block btn-danger"><i' +
+                    '                                    class="fa fa-fw fa-trash"></i>Delete</button>' +
+                    '                        </div>' +
+                    '                    </div>' +
+                    '';
+                $('#Answers_Edit').append(variable);
+
+
+
+            }
+            $('button[id=Delete_Answer_Edit]').once('click', function () {
+
+                if ($(this).parent().parent().find('input').attr('True_Answer') == "True") {
+                    $(this).parent().parent().remove()
+                    $('input[name=Answers_Edit][True_Answer=False]').first().attr('True_Answer', 'True').attr('placeholder', 'True Answer!')
+                }
+                else {
+                    $(this).parent().parent().remove()
+                }
+
+            })
+
+
+
+        })
+
+
+
+        $('#Edit_Question').click(function () {
+            console.log("asdsdaasd")
+            if ($('input[name=Answers_Edit]').each(function () { }).length < 1) {
+                Swal.fire(
+                    'Please Add Answers',
+                )
+            }
+            else {
+                var is_Sendeable = 1;
+                var Question_Id = $(this).attr('question_id');
+
+                if ($('#Question_Text_Edit').val() == "") {
+                    $('#Question_Text_Edit').attr('class', 'form-control is-invaild')
+                    is_Sendeable = 0
+                }
+                else {
+                    $(this).attr('class', 'form-control')
+                    is_Sendeable = 1
+                }
+                var x = {
+                    id: $(this).attr('question_id'),
+                    Question_Text: $('#Question_Text_Edit').val()
+                }
+
+                if (is_Sendeable == 1) {
+                    $.ajax({
+                        url: 'api/Questions/Question_Edit',
+                        type: 'POST',
+                        async: false,
+                        dataType: "json",
+                        data: JSON.stringify(x),
+                        contentType: "application/json; charset=utf-8",
+                        success: function (data) {
+
+                            Question_Id = data.id
+
+                        },
+                        error: function (xhr, status, error) {
+                            if (xhr.status == 200) {
+
+                            }
+                            else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Talep Esnasında Bir Hata Oluştur',
+                                    text: '' + xhr.status + '   ' + error.Message,
+                                })
+                            }
+
+                        }
+                    })
+
+                }
+
+
+
+
+
+
+
+                $('input[name=Answers_Edit]').each(function () {
+                    if ($(this).val() == "") {
+                        $(this).attr('class', 'form-control is-invaild')
+                        is_Sendeable = 0
+                    }
+                    else {
+                        $(this).attr('class', 'form-control')
+                        is_Sendeable = 1
+
+                    }
+                })
+
+                if (is_Sendeable == 1) {
+                    var Answers = [];
+                    $('input[name=Answers_Edit]').each(function () {
+                        var Answer = {
+                            Answer_Text: $(this).val(),
+                            Question_Id: Question_Id,
+                            Is_True: $(this).attr('True_Answer') == "True" ? 1 : 0
+                        }
+                        Answers.push(Answer);
+                    })
+                    Change_Answer(Answers)
+
+                }
+
+            }
+
+
+
+        })
+
+
+        function Change_Answer(Answers) {
+
+            $.ajax({
+                url: 'api/Answer/Answer_Delete_By_Question_Id',
+                type: 'POST',
+                async: false,
+                dataType: "json",
+                data: JSON.stringify(Answers[0]),
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                },
+                error: function (xhr, status, error) {
+                    if (xhr.status == 200) {
+
+                    }
+                    else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Talep Esnasında Bir Hata Oluştur',
+                            text: '' + xhr.status + '   ' + error.Message,
+                        })
+                    }
+
+                }
+            })
+
+            for (var i = 0; i < Answers.length; i++) {
+                $.ajax({
+                    url: 'api/Answer/Answer_Add',
+                    type: 'POST',
+                    async: false,
+                    dataType: "json",
+                    data: JSON.stringify(Answers[i]),
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                    },
+                    error: function (xhr, status, error) {
+                        if (xhr.status == 200) {
+
+                        }
+                        else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Talep Esnasında Bir Hata Oluştur',
+                                text: '' + xhr.status + '   ' + error.Message,
+                            })
+                        }
+
+                    }
+                })
+            }
+
+
+
+
+
+        }
+        FillQuestion_Pool_Select()
+        function FillQuestion_Pool_Select() {
+            $.ajax({
+                url: 'api/QuestionPool/QuestionPool_Get_All',
+                type: 'POST',
+                async: false,
+                dataType: "json",
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    console.log(data)
+                    $('#Question_Pool_Select').empty()
+                    $('#Question_Pool_Select_Edit').empty()
+                    for (var i = 0; i < data.length; i++) {
+                        $('#Question_Pool_Select').append('<option value="' + data[i].id + '">' + data[i].pool_Name + '</option>')
+                        $('#Question_Pool_Select_Edit').append('<option value="' + data[i].id + '">' + data[i].pool_Name + '</option>')
+                    }
+                },
+                error: function (xhr, status, error) {
+                    if (xhr.status == 200) {
+
+                    }
+                    else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Talep Esnasında Bir Hata Oluştur',
+                            text: '' + xhr.status + '   ' + error.Message,
+                        })
+                    }
+
+                }
+            })
+
+
+
+        }
+        $('#Open_Question_Pool_Manager').click(function () {
+            if ($(this).attr('is-open') == "true") {
+                $('#Question_Add_Div').removeAttr('hidden')
+                $(this).attr('is-open', 'false')
+            }
+            else {
+                $('#Question_Add_Div').attr('hidden', 'true')
+                $(this).attr('is-open', 'true')
+            }
+
+        })
+        $('#Open_Question_Pool_Manager_Edit').click(function () {
+            if ($(this).attr('is-open') == "true") {
+                $('#Question_Add_Div_Edit').removeAttr('hidden')
+                $(this).attr('is-open', 'false')
+            }
+            else {
+                $('#Question_Add_Div_Edit').attr('hidden', 'true')
+                $(this).attr('is-open', 'true')
+            }
+
+        })
+        $('button[id=Add_Question_Pool_Edit]').click(function () {
+            var is_Sendeable = 1;
+            var x = {
+                Pool_Name: $('#Question_Pool_Add_Input_Edit').val()
+            }
+            if (x.Pool_Name == "") {
+                $('#Question_Pool_Add_Input_Edit').attr('class', 'form-control is-invalid')
+                is_Sendeable = 0;
+            }
+            else {
+                $('#Question_Pool_Add_Input_Edit').attr('class', 'form-control is-invalid')
+                is_Sendeable = 1;
+            }
+            if (is_Sendeable == 1) {
+                $.ajax({
+                    url: 'api/QuestionPool/Question_Pool_Add',
+                    type: 'POST',
+                    async: false,
+                    data: JSON.stringify(x),
+                    dataType: "json",
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                        console.log(data)
+                        FillQuestion_Pool_Select()
+                        $('#Question_Pool_Add_Input_Edit').val("")
+                        $('#Question_Add_Div_Edit').attr('hidden', 'true')
+                    },
+                    error: function (xhr, status, error) {
+                        if (xhr.status == 200) {
+
+                        }
+                        else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Talep Esnasında Bir Hata Oluştur',
+                                text: '' + xhr.status + '   ' + error.Message,
+                            })
+                        }
+
+                    }
+                })
+            }
+
+
+        })
+
+
+
+        $('button[id=Add_Question_Pool]').click(function () {
+            var is_Sendeable = 1;
+            console.log($('#Question_Pool_Add_Input').val())
+            var x = {
+                Pool_Name: $('#Question_Pool_Add_Input').val()
+            }
+            console.log(x)
+            if (x.Pool_Name == "") {
+                $('#Question_Pool_Add_Input').attr('class', 'form-control is-invalid')
+                is_Sendeable = 0;
+            }
+            else {
+                $('#Question_Pool_Add_Input').attr('class', 'form-control')
+                is_Sendeable = 1;
+            }
+            if (is_Sendeable == 1) {
+                $.ajax({
+                    url: 'api/QuestionPool/Question_Pool_Add',
+                    type: 'POST',
+                    async: false,
+                    data: JSON.stringify(x),
+                    dataType: "json",
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                        console.log(data)
+                        FillQuestion_Pool_Select()
+                        Swal.fire({
+                            icon: 'sucsess'
+                        })
+                        $('#Question_Pool_Add_Input').val("")
+                        $('#Question_Add_Div').attr('hidden', 'true')
+
+                    },
+                    error: function (xhr, status, error) {
+                        if (xhr.status == 200) {
+
+                        }
+                        else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Talep Esnasında Bir Hata Oluştur',
+                                text: '' + xhr.status + '   ' + error.Message,
+                            })
+                        }
+
+                    }
+                })
+            }
+
+
+        })
+
+
+
+
+
+
+
+
+    })
+</script>
+<div class="modal fade" id="Questions_Modal_Edit" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="Questions_Modal_Header_Edit">Edit Question</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-10">
+                        <select class="form-control" id="Question_Pool_Select_Edit"></select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" is-open="true" id="Open_Question_Pool_Manager_Edit"
+                            class="btn btn-block btn-primary"><i class="fa fa-fw fa-plus"></i>Add Pool</button>
+                    </div>
+                </div>
+                <div id="Question_Add_Div_Edit" hidden="false" style="padding-top: 25px;">
+                    <div class="row">
+                        <div class="col-md-10">
+                            <input type="text" placeholder="Pool Name" class="form-control"
+                                id="Question_Pool_Add_Input_Edit" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" id="Add_Question_Pool_Edit" class="btn btn-block btn-primary"><i
+                                    class="fa fa-fw fa-plus"></i>Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <label for="">Question Text:</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <textarea class="form-control" id="Question_Text_Edit" rows="5"></textarea>
+                    </div>
+                </div>
+                <div id="Answers_Edit">
+                </div>
+                <div class="row" style="padding-top:25px ;">
+                    <div class="col-md-10"></div>
+                    <div class="col-md-2">
+                        <button type="button" id="Edit_Answer_Btn" class="btn btn-block btn-primary"><i
+                                class="fa fa-fw fa-plus"></i>Add Answer</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" id="Edit_Question" class="btn btn-primary">Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="Questions_Modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="Questions_Modal_Header">Create Question</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-10">
+                        <select class="form-control" id="Question_Pool_Select"></select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" is-open="true" id="Open_Question_Pool_Manager"
+                            class="btn btn-block btn-primary"><i class="fa fa-fw fa-plus"></i>Add Pool</button>
+                    </div>
+                </div>
+                <div id="Question_Add_Div" hidden="false" style="padding-top: 25px;">
+                    <div class="row">
+                        <div class="col-md-10">
+                            <input type="text" placeholder="Pool Name" class="form-control"
+                                id="Question_Pool_Add_Input" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" id="Add_Question_Pool" class="btn btn-block btn-primary"><i
+                                    class="fa fa-fw fa-plus"></i>Add</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <label for="">Question Text:</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <textarea class="form-control" id="Question_Text" rows="5"></textarea>
+                    </div>
+                </div>
+                <div id="Answers">
+                </div>
+                <div class="row" style="padding-top:25px ;">
+                    <div class="col-md-10"></div>
+                    <div class="col-md-2">
+                        <button type="button" id="Add_Answer_Btn" class="btn btn-block btn-primary"><i
+                                class="fa fa-fw fa-plus"></i>Add Answer</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" id="Save_Question" class="btn btn-primary">Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header"><label>Create Question</label></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-10"></div>
+                    <div class="col-md-2">
+                        <button type="button" id="Create_Question_Btn" class="btn btn-block btn-primary"><i
+                                class="fa fa-fw fa-plus"></i>Create Question</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <table data-search="true" id="Questions_Table">
+
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

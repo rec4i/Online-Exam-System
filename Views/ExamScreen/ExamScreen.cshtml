@@ -1,0 +1,540 @@
+@{
+    Layout = "~/Views/Shared/ExamScreen_Layout.cshtml";
+}
+<script>
+    $.fn.once = function (a, b) {
+        return this.each(function () {
+            $(this).off(a).on(a, b);
+        });
+    };
+    $(document).ready(function () {
+        function getCookie(name) {
+            var cookieArr = document.cookie.split(";");
+            for (var i = 0; i < cookieArr.length; i++) {
+                var cookiePair = cookieArr[i].split("=");
+                if (name == cookiePair[0].trim()) {
+                    return decodeURIComponent(cookiePair[1]);
+                }
+            }
+            return null;
+        }
+
+
+        $('#Login_Modal').modal({ backdrop: 'static', keyboard: false })
+        //  $('#Login_Modal').modal('show')
+
+        console.log(window.location.href.split('&').length)
+
+        let queryParams = new URLSearchParams(window.location.search)
+
+        queryParams.toString()
+
+        if (queryParams.get('Exam_Guid') != "null") {
+
+            var x = document.cookie;
+            if (getCookie('Exam_Guid') != queryParams.get('Exam_Guid')) {
+                document.cookie = "Exam_Guid=" + queryParams.get('Exam_Guid');
+            }
+            if (queryParams.get('Exam_Guid') == null) {
+                $('#Start_Exam').attr('disabled', 'true')
+            }
+            else {
+                $('#Start_Exam').removeAttr('disabled')
+            }
+        }
+
+        var User_Data;
+        $('#Start_Exam').click(function () {
+            var is_sendable = 1;
+
+            var x = {
+                "Exam_Guid": queryParams.get('Exam_Guid'),
+                "User_Name": $('#Kullanıcı_Ad').val()
+            }
+            if (x.User_Name == "") {
+                $('#Kullanıcı_Ad').attr('class', 'form-control is-invalid')
+                is_sendable = 0;
+            }
+            else {
+                $('#Kullanıcı_Ad').attr('class', 'form-control ')
+                is_sendable = 1;
+            }
+            if (is_sendable == 1) {
+                $.ajax({
+                    url: 'api/ExamScrennApi/Create_Exam_User_Informaiton',
+                    type: 'POST',
+                    async: false,
+                    dataType: "json",
+                    data: JSON.stringify(x),
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                        console.log("UserDaharas")
+                        console.log(data)
+                        User_Data = data;
+                        StartExam_(User_Data)
+
+                    },
+                    error: function (xhr, status, error) {
+                        if (xhr.status == 200) {
+
+                        }
+                        else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Talep Esnasında Bir Hata Oluştur',
+                                text: '' + xhr.status + '   ' + error,
+                            })
+                        }
+
+                    }
+                })
+                $('#Login_Modal').modal('hide')
+                document.cookie = "username=" + $('#Kullanıcı_Ad').val();
+                var x = document.cookie;
+                console.log(getCookie('username'))
+
+
+            }
+
+
+
+        })
+        console.log("USERTDATATATA")
+
+        Check_Exam_Is_Expired()
+        function Check_Exam_Is_Expired() {
+            var Ex_Inf = Exam_Information(User_Data)
+            var Date_Start = new Date(Ex_Inf.exam_Strat_Date);
+            var Date_End = new Date(Ex_Inf.exam_End_Date);
+            var Date_Now = Date.now();
+
+            $('#Exam_Start_Date_Input').val(Ex_Inf.exam_Strat_Date.replaceAll('T', ' '))
+            $('#Exam_End_Date_Input').val(Ex_Inf.exam_End_Date.replaceAll('T', ' '))
+            $('#Question_per_Second_Input').val(Ex_Inf.exam_Question_Per_Second)
+            $('#Number_Of_Question_Input').val(Ex_Inf.exam_Number_Of_Questions)
+
+            var Is_Ok = 1;
+            if (Date_Now > Date_Start) {
+                Is_Ok = 1;
+            }
+            else {
+                Is_Ok = 0;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Exam was not started',
+                })
+            }
+            if (Date_Now < Date_End) {
+                Is_Ok = 1;
+            }
+            else {
+                Is_Ok = 0;
+            }
+
+            if (Is_Ok == 1) {
+                $('#Start_Exam').removeAttr('disabled')
+            }
+            else {
+                $('#Start_Exam').attr('disabled', 'true')
+
+
+            }
+        }
+
+
+        function StartExam_(User_Data) {
+            $.ajax({
+                url: 'api/ExamScrennApi/Create_Random_Exam_Questions',
+                type: 'POST',
+                async: false,
+                dataType: "json",
+                data: JSON.stringify(User_Data),
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    console.log("Start_Exammm")
+                    console.log(data)
+                    Start_Counter(data, User_Data)
+                },
+                error: function (xhr, status, error) {
+                    if (xhr.status == 200) {
+
+                    }
+                    else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Talep Esnasında Bir Hata Oluştur',
+                            text: '' + xhr.status + '   ' + error,
+                        })
+                    }
+
+                }
+            })
+        }
+
+        function Exam_Information(User_Data) {
+
+            var x = {
+                Exam_Connection_Id: queryParams.get('Exam_Guid')
+            }
+            console.log(x)
+            var Rd;
+            $.ajax({
+                url: 'api/ExamScrennApi/Exam_Get_By_Guid',
+                type: 'POST',
+                async: false,
+                dataType: "json",
+                data: JSON.stringify(x),
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    console.log(data)
+                    Rd = data;
+                    console.log(Rd);
+                },
+                error: function (xhr, status, error) {
+                    if (xhr.status == 200) {
+
+                    }
+                    else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Talep Esnasında Bir Hata Oluştur',
+                            text: '' + xhr.status + '   ' + error,
+                        })
+                    }
+
+                }
+            })
+            return Rd;
+
+
+        }
+
+
+        function Start_Counter(Questions, User_Data) {
+            console.log("asdsasddsa")
+            console.log(Questions)
+            $('#Questions').empty()
+            for (var i = 0; i < Questions.length; i++) {
+                var variable = '' +
+                    ' <li class="nav-item">' +
+                    '                                                <a class="nav-link">' +
+                    '                                                    <i class="fas fa-circle nav-icon"></i>' +
+                    '                                                    <p>Question ' + (i + 1) + '</p>' +
+                    '                                                </a>' +
+                    '                                            </li>' +
+                    '';
+
+                $('#Questions_Nav_Bar').append(variable)
+            }
+
+            var Exam_Information_ = Exam_Information(User_Data)
+
+            console.log(Exam_Information_)
+            var Question_Per_Socund = Exam_Information(User_Data).exam_Question_Per_Second
+            var Secon_Coundter = Question_Per_Socund;
+            var Question_Counter = Questions.length
+            var Question_text_Area = '' +
+                ' <div class="row">' +
+                '                        <div class="col-md-12">' +
+                '                            <textarea name="" readonly id="" class="form-control" rows="5">' + Questions[Questions.length - Question_Counter].question_Text + '</textarea>' +
+                '                        </div>' +
+                '                    </div>' +
+                '';
+
+            $('#Questions').append(Question_text_Area)
+            for (var i = 0; i < Questions[Questions.length - Question_Counter].answers.length; i++) {
+                console.log(i)
+                var Answers = '' +
+                    '<div class="row" style="padding-top: 25px;">' +
+                    '                        <div class="col-md-12">' +
+                    '                            <textarea rows="2" Seçildi="false"' +
+                    'Exam_Guid= "' + Exam_Information_.exam_Connection_Id + '"' +
+                    'Question_Id = "' + Questions[Questions.length - Question_Counter].id + '"' +
+                    ' Answer_Id =  "' + Questions[Questions.length - Question_Counter].answers[i].id + '"' +
+                    ' ' +
+                    ' readonly id="Answer" class="form-control">' + Questions[Questions.length - Question_Counter].answers[i].answer_Text + '</textarea>' +
+                    '                        </div>' +
+                    '                    </div>' +
+                    '';
+                $('#Questions').append(Answers)
+
+            }
+            $('textarea[id=Answer]').once('click', function () {
+                $('textarea[id=Answer][Seçildi=true]').each(function () {
+                    console.log("sadsadsadsad")
+                    $(this).attr('class', 'form-control')
+                    $(this).removeAttr('style')
+                    $(this).attr('Seçildi', 'false')
+                })
+
+                $(this).attr('class', 'form-control is-valid')
+                $(this).attr('style', 'background-color: yellowgreen;')
+                $(this).attr('Seçildi', 'true')
+            })
+
+
+
+            var x = setInterval(function () {
+                console.log(User_Data.guid)
+
+
+                if (Question_Counter == 0) {
+                    console.log("asdkpladskşolkşo")
+                    myStopFunction(x)
+                    for (var i = 0; i < User_Answers.length; i++) {
+                        $.ajax({
+                            url: 'api/ExamScrennApi/Add_User_Answers',
+                            type: 'POST',
+                            async: false,
+                            dataType: "json",
+                            data: JSON.stringify(User_Answers[i]),
+                            contentType: "application/json; charset=utf-8",
+                            success: function (data) {
+
+
+                            },
+                            error: function (xhr, status, error) {
+                                if (xhr.status == 200) {
+
+                                }
+                                else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Talep Esnasında Bir Hata Oluştur',
+                                        text: '' + xhr.status + '   ' + error,
+                                    })
+                                }
+
+                            }
+                        })
+
+                    }
+                    console.log(User_Answers)
+                    window.location.href = "/ExamScreen";
+
+
+
+                }
+                if (Secon_Coundter < 5) {
+                    $('#Demo').attr('style', 'background-color:red;border-radius: 5px;')
+
+                }
+                else {
+                    $('#Demo').removeAttr('style')
+                }
+
+
+                $('#Demo').html(Secon_Coundter + "  second left for the next question")
+                Secon_Coundter--;
+                if (Secon_Coundter == 0) {
+                    $('textarea[id=Answer]').each(function () {
+                        console.log($(this).attr('Seçildi'))
+                        if ($(this).attr('Seçildi') == "true") {
+
+                        }
+                        else {
+
+                        }
+                    })
+
+                    if ($('textarea[id=Answer][Seçildi=true]').each(function () { }).length >= 1) {
+                        var Answer_Information = {
+                            User_Guid: User_Data.guid,
+                            Exam_Guid: $('textarea[id=Answer][Seçildi=true]').attr('Exam_Guid'),
+                            Question_Id: $('textarea[id=Answer][Seçildi=true]').attr('Question_Id'),
+                            Answer_Id: $('textarea[id=Answer][Seçildi=true]').attr('answer_id')
+
+                        }
+
+                        User_Answers.push(Answer_Information)
+                        console.log("if")
+                    }
+                    else {
+                        var Answer_Information = {
+                            User_Guid: User_Data.guid,
+                            Exam_Guid: $('textarea[id=Answer][Seçildi=false]').attr('Exam_Guid'),
+                            Question_Id: $('textarea[id=Answer][Seçildi=false]').attr('Question_Id'),
+                            Answer_Id: 0
+
+                        }
+                        User_Answers.push(Answer_Information)
+                        console.log("else")
+                    }
+
+                    $('#Questions').empty()
+                    Secon_Coundter = Question_Per_Socund;
+                    Question_Counter--;
+                    var Question_text_Area = '' +
+                        ' <div class="row">' +
+                        '                        <div class="col-md-12">' +
+                        '                            <textarea name="" disabled id="" class="form-control" rows="5">' + Questions[Questions.length - Question_Counter].question_Text + '</textarea>' +
+                        '                        </div>' +
+                        '                    </div>';
+                    $('#Questions').append(Question_text_Area)
+                    for (var i = 0; i < Questions[Questions.length - Question_Counter].answers.length; i++) {
+                        var Answers = '' +
+                            '<div class="row" style="padding-top: 25px;">' +
+                            '                        <div class="col-md-12">' +
+                            '                            <textarea rows="2" Seçildi="false"' +
+                            'Exam_Guid= "' + Exam_Information_.exam_Connection_Id + '"' +
+                            'Question_Id = "' + Questions[Questions.length - Question_Counter].id + '"' +
+                            ' Answer_Id =  "' + Questions[Questions.length - Question_Counter].answers[i].id + '"' +
+                            ' ' +
+                            ' readonly id="Answer" class="form-control">' + Questions[Questions.length - Question_Counter].answers[i].answer_Text + '</textarea>' +
+                            '                        </div>' +
+                            '                    </div>' +
+                            '';
+                        $('#Questions').append(Answers)
+
+                    }
+
+
+
+
+
+                    $('textarea[id=Answer]').once('click', function () {
+                        console.log($(this).attr('seçildi'))
+                        $('textarea[id=Answer][seçildi="true"]').each(function () {
+                            $(this).attr('class', 'form-control')
+                            $(this).removeAttr('style')
+                            $(this).attr('Seçildi', 'false')
+                        })
+
+                        $(this).attr('class', 'form-control is-valid')
+                        $(this).attr('style', 'background-color: yellowgreen;')
+                        $(this).attr('Seçildi', 'true')
+                    })
+                    console.log()
+
+
+
+
+
+
+
+
+                }
+
+
+
+
+            }, 1000);
+
+            $('#Next_Question').click(function () {
+                Secon_Coundter = 1;
+            })
+
+
+
+        }
+        function myStopFunction(Interval) {
+            clearInterval(Interval);
+        }
+
+        var User_Answers = []
+
+        function Push_User_Answer(Answer_Information) {
+            User_Answers.push(Answer_Information)
+        }
+
+
+
+
+
+    })
+</script>
+
+<div class="modal fade" id="Login_Modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+
+                <div class="row text-center">
+                    <div class="col-md-12">
+                        <img src="images/indir.png" style="width:360px;" />
+                    </div>
+                </div>
+                <div class="row" style="padding-top: 25px;">
+                    <div class="col-md-6">
+                        <label for="">Exam Start Date:</label>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="">Exam End Date:</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <input type="text" disabled class="form-control" id="Exam_Start_Date_Input">
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" disabled class="form-control" id="Exam_End_Date_Input">
+                    </div>
+                </div>
+                <div class="row" style="padding-top: 25px;">
+                    <div class="col-md-6">
+                        <label for="">Question Per Second:</label>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="">Nuber Of Questions:</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <input type="text" disabled class="form-control" id="Question_per_Second_Input">
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" disabled class="form-control" id="Number_Of_Question_Input">
+                    </div>
+                </div>
+                <div class="input-group mb-3" style="padding-top: 25px;">
+                    <input ID="Kullanıcı_Ad" class="form-control" type="text" placeholder="Kullanıcı Adı"></input>
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <span class="fas fa-envelope"></span>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="Start_Exam" class="btn btn-primary">Start Exam
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header text-center">
+                <label id="Demo" for=""> </label>
+            </div>
+            <div class="card-body">
+                <div id="Questions">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <textarea name="" readonly id="" class="form-control" rows="5"></textarea>
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top: 25px;">
+                        <div class="col-md-12">
+                            <input type="text" readonly id="Answer" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="card-footer text-center">
+                <button type="button" id="Finish_The_Exam" class="btn btn-danger">Finish the exam
+                </button>
+                <button type="button" id="Next_Question" class="btn btn-primary">Next Question
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>

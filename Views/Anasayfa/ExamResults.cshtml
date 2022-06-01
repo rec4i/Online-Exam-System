@@ -1,0 +1,352 @@
+@{
+    Layout = "~/Views/Shared/Anasayfa_Layout.cshtml";
+}
+<link href="https://unpkg.com/bootstrap-table@1.19.1/dist/bootstrap-table.min.css" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/tableexport.jquery.plugin@1.10.21/tableExport.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tableexport.jquery.plugin@1.10.21/libs/jsPDF/jspdf.min.js"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/tableexport.jquery.plugin@1.10.21/libs/jsPDF-AutoTable/jspdf.plugin.autotable.js"></script>
+<script src="https://unpkg.com/bootstrap-table@1.19.1/dist/bootstrap-table.min.js"></script>
+<script src="https://unpkg.com/bootstrap-table@1.19.1/dist/extensions/export/bootstrap-table-export.min.js"></script>
+<script>
+    function ajaxRequest(params) {
+        $.ajax({
+            url: "/api/ExamResult/Get_All_Exam_List_With_Pagination",
+            type: 'POST',
+            async: false,
+            dataType: "json",
+            data: '{' +
+                '"offset":"' + params.data.offset + '",' +
+                '"limit":"' + params.data.limit + '",' +
+                '"search":"' + params.data.search + '"' +
+                '}',
+            contentType: "application/json; charset=utf-8",
+            success: function (data) {
+                var temp = data
+                var rows = []
+                console.log(data)
+                for (i = 0; i < temp.rows.length; i++) {
+                    var x = {
+                        'Start_Date': temp.rows[i].exam_Strat_Date.replaceAll('T', ' '),
+                        'End_Date': temp.rows[i].exam_End_Date.replaceAll('T', ' '),
+                        'Question_Per_Sercond': temp.rows[i].exam_Question_Per_Second,
+                        'Number_Of_Question': temp.rows[i].exam_Number_Of_Questions,
+                        'Subs': temp.rows[i].subs,
+                        'Show_Results': '<button class="btn btn-warning btn-sm" value="' + temp.rows[i].id + '" id="Show_Resluts" style="word-break: keep-all;"><i class="fa fa-file-text "></i> Show Result</button>',
+                        'Exam_Link': '<button class="btn btn-primary btn-sm" value="' + temp.rows[i].exam_Connection_Id + '" id="Exam_Link" style="word-break: keep-all;"><i class="fa fa-copy "></i> Copy Link</button>',
+                        'Delete': '<button class="btn btn-danger btn-sm" value="' + temp.rows[i].id + '" id="Delete" style="word-break: keep-all;"><i class="fa fa-trash "></i> Delete</button>'
+
+                    }
+                    rows.push(x)
+
+                }
+                temp.rows = rows
+                params.success(temp)
+
+
+            },
+            error: function () {
+                alert('Talep esnasında sorun oluştu.Yeniden deneyin');
+            }
+        });
+
+    }
+</script>
+<script>
+    $(document).ready(function () {
+
+        Create_Exams_Table($('#Exams_Table'), 0, 0)
+        function Create_Exams_Table($el, cells, rows) {
+
+            $el.bootstrapTable('destroy');
+
+            var i; var j; var row
+            var columns = [];
+            var data__ = [];
+
+            columns.push({
+                field: 'Start_Date',
+                title: 'Strat Date',
+                sortable: true
+            })
+            columns.push({
+                field: 'End_Date',
+                title: 'End Date',
+                sortable: true
+            })
+            columns.push({
+                field: 'Question_Per_Sercond',
+                title: 'Question Per Second',
+                sortable: true
+            })
+            columns.push({
+                field: 'Number_Of_Question',
+                title: 'Number Of Question',
+                sortable: true
+            })
+            columns.push({
+                field: 'Subs',
+                title: 'Subs',
+                sortable: true
+            })
+            columns.push({
+                field: 'Exam_Link',
+                title: 'Exam Link',
+                sortable: true
+            })
+            columns.push({
+                field: 'Delete',
+                title: 'Delete',
+                sortable: true
+            })
+            columns.push({
+                field: 'Show_Results',
+                title: 'Show Results',
+                sortable: true
+            })
+
+
+            $el.bootstrapTable({
+                sidePagination: "server",
+                pagination: true,
+                ajax: "ajaxRequest",
+                clickToSelect: true,
+                columns: columns,
+                data: data__,
+                exportTypes: ['json', 'xml', 'csv', 'txt', 'sql', 'excel', 'pdf'],
+                exportOptions: {
+                    fileName: function () {
+                        const monthNames = ["January", "February", "March", "April", "May", "June",
+                            "July", "August", "September", "October", "November", "December"];
+                        const dateObj = new Date();
+                        const month = monthNames[dateObj.getMonth()];
+                        const day = String(dateObj.getDate()).padStart(2, '0');
+                        const year = dateObj.getFullYear();
+                        const output = day + '-' + month + '-' + year;
+                        return 'Exams ' + output
+                    }
+                },
+                onPostBody: function () {
+
+
+                    $('button[id=Exam_Link]').click(function () {
+
+                        const url = new URL(window.location.href);
+                        var Connetion_Link = url.origin + "/ExamScreen?Exam_Guid=" + $(this).attr('value')
+                        navigator.clipboard.writeText(Connetion_Link);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Link successfully copied',
+                        })
+
+                    })
+                    $('button[id=Delete]').click(function () {
+                        console.log($(this).attr('value'))
+                        Swal.fire({
+                            title: 'Are you sure?',
+                            text: "You won't be able to revert this!",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Yes, delete it!'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+
+                                var x = {
+                                    id: $(this).attr('value')
+                                }
+                                $.ajax({
+                                    url: 'api/Exam/Exam_Delete',
+                                    type: 'POST',
+                                    async: false,
+                                    dataType: "json",
+                                    data: JSON.stringify(x),
+                                    contentType: "application/json; charset=utf-8",
+                                    success: function (data) {
+                                        Swal.fire(
+                                            'Deleted!',
+                                            'success'
+                                        )
+                                        Create_Question_Table($('#Questions_Table'), 0, 0)
+
+                                    },
+                                    error: function (xhr, status, error) {
+                                        if (xhr.status == 200) {
+
+                                        }
+                                        else {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Talep Esnasında Bir Hata Oluştur',
+                                                text: '' + xhr.status + '   ' + error.Message,
+                                            })
+                                        }
+
+                                    }
+                                })
+                            }
+                        })
+
+                    })
+
+                    $('button[id=Show_Resluts]').click(function () {
+                        $('#Exam_Results_modal').modal('show')
+                        Birimleri_Doldur_Tablo($('#Exam_Results_Table'), 0, 0, $(this).attr('value'))
+
+                    })
+
+                }
+
+            })
+
+        }
+
+
+        function Birimleri_Doldur_Tablo($el, cells, rows, Exam_ID) {
+
+            $el.bootstrapTable('destroy');
+
+            var i; var j; var row
+            var columns = [];
+            var data__ = [];
+
+
+            columns.push({
+                field: 'User_Name',
+                title: 'User Name',
+                sortable: true
+            })
+            columns.push({
+                field: 'True_Answers',
+                title: 'True Answers',
+                sortable: true
+            })
+            columns.push({
+                field: 'False_Answers',
+                title: 'False Answers',
+                sortable: true
+            })
+            columns.push({
+                field: 'Sucsess_Rate',
+                title: 'Sucsess Rate',
+                sortable: true
+            })
+
+
+            var x = {
+                id: Exam_ID
+            }
+
+            $.ajax({
+                url: 'api/ExamResult/Get_By_Exam_Guid_Exam_Resutls',
+                type: 'POST',
+                async: false,
+                data: JSON.stringify(x),
+                dataType: "json",
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+
+                    var temp = data
+                    console.log(temp)
+
+
+                    for (i = 0; i < temp.length; i++) {
+                        row = {}
+
+
+                        row['User_Name'] = temp[i].user_Name
+                        row['True_Answers'] = temp[i].answer_Rate.true_Answer
+                        row['False_Answers'] = temp[i].answer_Rate.false_Answer
+                        row['Sucsess_Rate'] = temp[i].succses_Rate.toFixed(2)
+
+
+                        data__.push(row)
+
+
+                    }
+                },
+                error: function () {
+                    alert('Talep esnasında sorun oluştu.Yeniden deneyin');
+                }
+            });
+
+
+
+            $el.bootstrapTable({
+                columns: columns,
+                data: data__,
+                exportTypes: ['json', 'xml', 'csv', 'txt', 'sql', 'excel', 'pdf'],
+                exportOptions: {
+                    fileName: function () {
+                        const monthNames = ["January", "February", "March", "April", "May", "June",
+                            "July", "August", "September", "October", "November", "December"];
+                        const dateObj = new Date();
+                        const month = monthNames[dateObj.getMonth()];
+                        const day = String(dateObj.getDate()).padStart(2, '0');
+                        const year = dateObj.getFullYear();
+                        const output = day + '-' + month + '-' + year;
+                        return 'Exams Results  ' + output
+                    }
+                },
+
+            })
+            $el.bootstrapTable('hideColumn', 'ID')
+
+
+
+
+
+
+
+        }
+
+
+
+
+
+
+
+
+
+
+    })
+</script>
+
+<div class="modal fade" id="Exam_Results_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="Exam_Results_modal">Exam Results</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <table id="Exam_Results_Table" data-toolbar="#toolbar" data-show-toggle="true"
+                            data-show-columns="true" data-show-export="true"></table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <table id="Exams_Table" data-toolbar="#toolbar" data-show-toggle="true" data-show-columns="true"
+                    data-show-export="true"></table>
+            </div>
+        </div>
+    </div>
+</div>
