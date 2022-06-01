@@ -70,7 +70,6 @@ namespace Kaynak_Kod.Services.Questions
             var temp = _context.answers;
             var Değer = temp.FirstOrDefault(o => o.Id == x.Id);
             Değer.Answer_Text = x.Answer_Text;
-            Değer.Is_True = x.Is_True;
             _context.SaveChanges();
 
             return Değer;
@@ -171,6 +170,18 @@ namespace Kaynak_Kod.Services.Questions
             var Değer = temp.FirstOrDefault(o => o.Question_Id == x.Question_Id);
             _context.answers.Remove(Değer);
             _context.SaveChanges();
+
+            // try
+            // {
+            //     var temp_ =_context.questions;
+            //     var obj = temp.Where(o => o.Id== );
+
+            // }
+            // catch (System.Exception)
+            // {
+                
+            //     throw;
+            // }
         }
     }
 }

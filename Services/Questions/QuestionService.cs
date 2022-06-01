@@ -157,8 +157,8 @@ namespace Kaynak_Kod.Services.Questions
             var Result = new pagination_Request_Result<Question_Return_Value>
             {
                 rows = rd.ToList(),
-                totalNotFiltered = temp.Count(),
-                total = Değer.Count()
+                totalNotFiltered = Değer.Count(),
+                total =  temp.Count(),
             };
 
             return Result;

@@ -8,7 +8,7 @@ namespace Kaynak_Kod.Entities.Questions
         [Key]
         public int Id { get; set; }
         public int Question_Id { get; set; }
-        [JsonIgnore]
+      
         public int Is_True { get; set; }
 
         public string Answer_Text { get; set; }

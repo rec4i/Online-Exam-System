@@ -136,7 +136,7 @@
                     is_Sendeable = 1
                 }
 
-                if (is_Sendeable == 1) {
+                if (is_Sendeable == "1231231333asdasd") {
                     $.ajax({
                         url: 'api/Questions/Question_Add',
                         type: 'POST',
@@ -189,8 +189,8 @@
                     $('input[name=Answers]').each(function () {
                         var Answers = {
                             Answer_Text: $(this).val(),
-                            Question_Id: Question_Id,
-                            Is_True: $(this).attr('True_Answer') == "True" ? 1 : 0
+                            Question_Id: 1,//Question_Id,
+                            Is_True: $(this).attr('true_answer') == "True" ? 1 : 0
                         }
                         console.log(Answers)
                         Push_Answer(Answers)
@@ -357,7 +357,6 @@
                 data: JSON.stringify(x),
                 contentType: "application/json; charset=utf-8",
                 success: function (data) {
-                    console.log(data)
                     Answers = data
 
                 },
@@ -486,7 +485,6 @@
 
 
         $('#Edit_Question').click(function () {
-            console.log("asdsdaasd")
             if ($('input[name=Answers_Edit]').each(function () { }).length < 1) {
                 Swal.fire(
                     'Please Add Answers',
@@ -501,7 +499,7 @@
                     is_Sendeable = 0
                 }
                 else {
-                    $(this).attr('class', 'form-control')
+                    $('#Question_Text_Edit').attr('class', 'form-control')
                     is_Sendeable = 1
                 }
                 var x = {
@@ -561,6 +559,7 @@
                     var Answers = [];
                     $('input[name=Answers_Edit]').each(function () {
                         var Answer = {
+                            Id:$(this).attr('Answer_Id'),
                             Answer_Text: $(this).val(),
                             Question_Id: Question_Id,
                             Is_True: $(this).attr('True_Answer') == "True" ? 1 : 0
@@ -580,7 +579,7 @@
 
         function Change_Answer(Answers) {
 
-            $.ajax({
+            @* $.ajax({
                 url: 'api/Answer/Answer_Delete_By_Question_Id',
                 type: 'POST',
                 async: false,
@@ -602,11 +601,11 @@
                     }
 
                 }
-            })
+            }) *@
 
             for (var i = 0; i < Answers.length; i++) {
                 $.ajax({
-                    url: 'api/Answer/Answer_Add',
+                    url: 'api/Answer/Answer_Edit',
                     type: 'POST',
                     async: false,
                     dataType: "json",
